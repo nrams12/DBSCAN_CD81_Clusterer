@@ -122,14 +122,3 @@ disp(['average Area: ',num2str(averageArea), ' nm^2']);
 averageNND = sum(holdNND)/length(holdNND); %calculate the average
 disp(['Average NND: ', num2str(averageNND), ' nm']);
 toc; %Time
-return
-%% Import csv and write into it
-disp('Prepare for Export');disp(' '); 
-exportSortedData = [holdCluster,MDHold]; %Create Matrix of the sorted data to prep for export
-writematrix(exportSortedData,folder+"MVClustersTotalMD.csv",'WriteMode','append'); %add to file
-exportSortedData = [holdCluster,holdArea]; %Create Matrix of the sorted data to prep for export
-writematrix(exportSortedData,folder+"MVClustersTotalArea.csv",'WriteMode','append'); %add to file
-exportSortedData = [holdCluster,holdNND]; %Create Matrix of the sorted data to prep for export
-writematrix(exportSortedData,folder+"MVClustersTotalNND.csv",'WriteMode','append'); %add to file
-disp('All Done.');
-toc; %Time
