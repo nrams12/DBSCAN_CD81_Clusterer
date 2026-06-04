@@ -29,7 +29,7 @@ disp("Data Loaded");
 minPTS = 17; %Set to the minimum nuber of points you want in a single cluster
 Epsilon = 20; %Set the search radius to find those minimum number of points
 
-Clusters = struct('XYG',{},'Area',{},'MaxDiameter',{},'NND',{},'NND_ID',{}); clusterLabel = [];
+Clusters = struct('XYG',{},'Area',{},'MaxDiameter',{},'Centroid',{},'NND',{},'NND_ID',{}); clusterLabel = [];
 disp("Begin Clustering");
 ClusterID = dbscan(RawXYData,Epsilon,minPTS); %perform the DBSCAN clustering of the X and Y data
 StructData=[RawXData,RawYData,ClusterID]; %set up for removing noise points
@@ -51,12 +51,11 @@ TheLegend = legend({' '});
 set(TheLegend,'visible','off'); 
 xlabel("X"); ylabel("Y"); title("Clusters");
 axis equal; xlim([Xmin-1000 Xmax+1000]); ylim([Ymin-1000 Ymax+1000]);
-return
 %% Attribute Calculation of Clusters
 %This section of code calculates the max diameter of each cluster. 
 disp("Calculating MD & Area");
 %Area
-nameCluster = 'Cluster'; holdArea = []; holdCluster = []; numberOfClusters = n; holdIDX = []; holdNND = []; MDHold = [];
+nameCluster = 'Cluster'; holdArea = []; holdCluster = []; numberOfClusters = n; holdIDX = []; holdNND = []; MDHold = []; holdCentroid = [];
 for i =1:numberOfClusters 
     holdTheCluster = Clusters(i).XYG;
     X = holdTheCluster(:,1);
@@ -69,50 +68,57 @@ for i =1:numberOfClusters
     area = polyarea(X(K),Y(K)); %Area of the boundary previously calculated.
     holdArea = [holdArea;area]; %add to matrix keeping track of area
     holdCluster = [holdCluster;i];%add to matrix keeping track of cluster number
-    f =strcat(nameCluster,num2str(i),'Area'); 
     Clusters(i).Area = area; 
 
     %Maximum Diameter of Cluster
     xydistances = pdist2([X,Y],[X,Y]);
     maxDiameter = max(xydistances(:));
     MDHold = [MDHold;maxDiameter];
-    f =strcat(nameCluster,num2str(i),'MaxDiameter'); 
     Clusters(i).MaxDiameter = maxDiameter; 
 end
-%% New NND Calculation
+%% NND Calculation
    %This section of code calculates a new NND. Rather than measuring the
    %distance of the center of a cluster to the nearest cluster center, this
    %code will calculte the distance of all points in the cluster to all
    %points of the nearest cluster. 
 disp("Calculating NND");
+
+
+
 for k = 1:numberOfClusters %loop through the clusters
     ClusterK = Clusters(k).XYG; %assign the cluster X and Y to varaibles
     Xk = ClusterK(:,1);
     Yk = ClusterK(:,2);
-    Ck = [Xk,Yk]; %combine X and Y
-    minDist = 3000000; %set minDist to something really high
-    idx = -1; %initialize the index of the cluser number
-    if length(X) < 4 %leave out clusters with less than 4 points
-     continue
-    end
-    for j = 1:numberOfClusters %nested for loop to loop through clusters to compare with cluster from first for loop
-       if j == k, continue; end %if the cluster being examined is the same as the one in this loop, skip it. 
-       ClusterJ = Clusters(j).XYG; %assign the cluster X and Y to varaibles
-       Xj = ClusterJ(:,1);
-       Yj = ClusterJ(:,2);
-       Cj = [Xj,Yj]; %combine X and Y
-       dist = pdist2(Ck, Cj); %calculate the distances of all points between the two clusters
-       d = min(dist(:)); %find the minimum value from the output of the pdist2 function
-       if d < minDist %if statement to keep replacing lower numbers with the minimum 
-           minDist = d;
-           idx = j;
-       end
-    end
-    holdNND = [holdNND;minDist]; %add the NND to the hold matrix
-    Clusters(k).NND = minDist; %add to struct
-    Clusters(k).NND_ID = idx; %add to struct
+    centroid =[sum(Xk)/length(Xk),sum(Yk)/length(Yk)];
+    holdCentroid=[holdCentroid;centroid];
+    Clusters(k).Centroid = centroid;
 end
 
+distance = NaN(numberOfClusters,numberOfClusters);
+for j = 1:numberOfClusters %loop through the clusters
+    clusterCenter1 = Clusters(j).Centroid; %assign the cluster X and Y to varaibles
+    center1X = clusterCenter1(1);
+    center1Y =clusterCenter1(2);
+    for jj =1:numberOfClusters
+        if j ==jj
+            continue
+        end
+        clusterCenter2 = Clusters(jj).Centroid;
+        center2X = clusterCenter2(1);
+        center2Y =clusterCenter2(2);
+        distance(jj,j) = sqrt(((center1X-center2X)^2) + ((center1Y-center2Y)^2));
+    end
+end
+
+for i =1:numberOfClusters
+    [minDist,nndID] = min(distance(:,i),[],'omitnan');
+    holdNND = [holdNND; minDist];
+    Clusters(i).NND = minDist;
+    Clusters(i).NND_ID = nndID;
+end
+
+
+% 
 %display average Area and MD
 averageMD = sum(MDHold)/length(MDHold);
 disp(['average Max Diamater: ',num2str(averageMD), ' nm']);
@@ -121,4 +127,15 @@ averageArea = sum(holdArea)/length(holdArea);
 disp(['average Area: ',num2str(averageArea), ' nm^2']);
 averageNND = sum(holdNND)/length(holdNND); %calculate the average
 disp(['Average NND: ', num2str(averageNND), ' nm']);
+toc; %Time
+return
+%% Import csv and write into it
+disp('Prepare for Export');disp(' '); 
+exportSortedData = [holdCluster,MDHold]; %Create Matrix of the sorted data to prep for export
+writematrix(exportSortedData,folder+"MVClustersTotalMD.csv",'WriteMode','append'); %add to file
+exportSortedData = [holdCluster,holdArea]; %Create Matrix of the sorted data to prep for export
+writematrix(exportSortedData,folder+"MVClustersTotalArea.csv",'WriteMode','append'); %add to file
+exportSortedData = [holdCluster,holdNND]; %Create Matrix of the sorted data to prep for export
+writematrix(exportSortedData,folder+"MVClustersTotalNND.csv",'WriteMode','append'); %add to file
+disp('All Done.');
 toc; %Time
