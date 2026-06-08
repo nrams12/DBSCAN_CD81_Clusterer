@@ -77,16 +77,13 @@ for i =1:numberOfClusters
     Clusters(i).MaxDiameter = maxDiameter; 
 end
 %% NND Calculation
-   %This section of code calculates a new NND. Rather than measuring the
-   %distance of the center of a cluster to the nearest cluster center, this
-   %code will calculte the distance of all points in the cluster to all
-   %points of the nearest cluster. 
+   %This section of code calculates the centroid-to-centroid NND. The code first loops through all clusters to calculate the centroids, 
+   %adding them to the struct. Then, distances between all centroids are calculated, and the non-self minimum is taken for a given cluster. 
+
 disp("Calculating NND");
 
-
-
 for k = 1:numberOfClusters %loop through the clusters
-    ClusterK = Clusters(k).XYG; %assign the cluster X and Y to varaibles
+    ClusterK = Clusters(k).XYG; %assign the cluster X and Y to variables
     Xk = ClusterK(:,1);
     Yk = ClusterK(:,2);
     centroid =[sum(Xk)/length(Xk),sum(Yk)/length(Yk)];
@@ -96,7 +93,7 @@ end
 
 distance = NaN(numberOfClusters,numberOfClusters);
 for j = 1:numberOfClusters %loop through the clusters
-    clusterCenter1 = Clusters(j).Centroid; %assign the cluster X and Y to varaibles
+    clusterCenter1 = Clusters(j).Centroid; %assign the cluster X and Y to variables
     center1X = clusterCenter1(1);
     center1Y =clusterCenter1(2);
     for jj =1:numberOfClusters
@@ -128,7 +125,7 @@ disp(['average Area: ',num2str(averageArea), ' nm^2']);
 averageNND = sum(holdNND)/length(holdNND); %calculate the average
 disp(['Average NND: ', num2str(averageNND), ' nm']);
 toc; %Time
-return
+
 %% Import csv and write into it
 disp('Prepare for Export');disp(' '); 
 exportSortedData = [holdCluster,MDHold]; %Create Matrix of the sorted data to prep for export
