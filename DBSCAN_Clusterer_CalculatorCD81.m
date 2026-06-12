@@ -3,7 +3,7 @@
 %calculates the  nearest neighbor distance, maximum diameter, and area of the clusters. The values are then exported 
 % in .csv file format. 
 %% Close all and Import Data 
-clear variables; clc; %close all; close all hidden;
+clear variables; %close all; close all hidden;
 disp("Previous Data Cleared"); 
 if not(isfolder('MATLABData'))
     mkdir('MATLABData')
@@ -77,41 +77,54 @@ for i =1:numberOfClusters
     Clusters(i).MaxDiameter = maxDiameter; 
 end
 %% NND Calculation
-   %This section of code calculates the centroid-to-centroid NND. The code first loops through all clusters to calculate the centroids, 
-   %adding them to the struct. Then, distances between all centroids are calculated, and the non-self minimum is taken for a given cluster. 
-
+   %This section of code calculates a new NND. Rather than measuring the
+   %distance of the center of a cluster to the nearest cluster center, this
+   %code will calculte the distance of all points in the cluster to all
+   %points of the nearest cluster. 
 disp("Calculating NND");
 
+
+
 for k = 1:numberOfClusters %loop through the clusters
-    ClusterK = Clusters(k).XYG; %assign the cluster X and Y to variables
+    ClusterK = Clusters(k).XYG; %assign the cluster X and Y to varaibles
     Xk = ClusterK(:,1);
     Yk = ClusterK(:,2);
-    centroid =[sum(Xk)/length(Xk),sum(Yk)/length(Yk)];
-    holdCentroid=[holdCentroid;centroid];
-    Clusters(k).Centroid = centroid;
+    centroid =[sum(Xk)/length(Xk),sum(Yk)/length(Yk)]; %find centroid by average of localizations in cluster
+    holdCentroid=[holdCentroid;centroid]; %add centroid to matrix of centroids
+    Clusters(k).Centroid = centroid; %add centroid to struct
 end
 
-distance = NaN(numberOfClusters,numberOfClusters);
+distance = NaN(numberOfClusters,numberOfClusters); %build matrix that is as large as #cluster x #clusters 
 for j = 1:numberOfClusters %loop through the clusters
-    clusterCenter1 = Clusters(j).Centroid; %assign the cluster X and Y to variables
+    clusterCenter1 = Clusters(j).Centroid; %assign the cluster X and Y to varaibles
+    ClusterJ = cleanClusters(j).XYG;
+    X5 = ClusterJ(:,1);
     center1X = clusterCenter1(1);
     center1Y =clusterCenter1(2);
+    if length(X5) < 4 %leave out clusters with less than 4 points
+        continue
+    end
     for jj =1:numberOfClusters
-        if j ==jj
+        if j ==jj %If cluster in second loop is same as first, skip. that calculation will be 0, and we want to keep as NaN
             continue
         end
-        clusterCenter2 = Clusters(jj).Centroid;
+        clusterCenter2 = Clusters(jj).Centroid; %Get centroid of second cluster
         center2X = clusterCenter2(1);
         center2Y =clusterCenter2(2);
-        distance(jj,j) = sqrt(((center1X-center2X)^2) + ((center1Y-center2Y)^2));
+        distance(jj,j) = sqrt(((center1X-center2X)^2) + ((center1Y-center2Y)^2)); %calculate the euclidean distance
     end
 end
 
-for i =1:numberOfClusters
-    [minDist,nndID] = min(distance(:,i),[],'omitnan');
-    holdNND = [holdNND; minDist];
-    Clusters(i).NND = minDist;
-    Clusters(i).NND_ID = nndID;
+for i =1:numberOfClusters %loop thru clusters
+    ClusterI = cleanClusters(i).XYG;
+    X2 = ClusterI(:,1);
+    if length(X2) < 4 %leave out clusters with less than 4 points
+        continue
+    end
+    [minDist,nndID] = min(distance(:,i),[],'omitnan'); %Find min in that column, return value plus index
+    holdNND = [holdNND; minDist]; %add to matrix of NNDs
+    Clusters(i).NND = minDist; %assign to struct
+    Clusters(i).NND_ID = nndID; %assign to struct
 end
 
 
@@ -119,13 +132,12 @@ end
 %display average Area and MD
 averageMD = sum(MDHold)/length(MDHold);
 disp(['average Max Diamater: ',num2str(averageMD), ' nm']);
-
 averageArea = sum(holdArea)/length(holdArea);
 disp(['average Area: ',num2str(averageArea), ' nm^2']);
 averageNND = sum(holdNND)/length(holdNND); %calculate the average
 disp(['Average NND: ', num2str(averageNND), ' nm']);
 toc; %Time
-
+return
 %% Import csv and write into it
 disp('Prepare for Export');disp(' '); 
 exportSortedData = [holdCluster,MDHold]; %Create Matrix of the sorted data to prep for export
