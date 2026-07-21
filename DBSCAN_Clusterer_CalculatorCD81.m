@@ -77,16 +77,14 @@ for i =1:numberOfClusters
     Clusters(i).MaxDiameter = maxDiameter; 
 end
 %% NND Calculation
-   %This section of code calculates a new NND. Rather than measuring the
-   %distance of the center of a cluster to the nearest cluster center, this
-   %code will calculte the distance of all points in the cluster to all
-   %points of the nearest cluster. 
+   %This section of code calculates NND, measuring the
+   %distance of the center of a cluster to the nearest cluster center. 
 disp("Calculating NND");
 
 
 
 for k = 1:numberOfClusters %loop through the clusters
-    ClusterK = Clusters(k).XYG; %assign the cluster X and Y to varaibles
+    ClusterK = Clusters(k).XYG; %assign the cluster X and Y to variables
     Xk = ClusterK(:,1);
     Yk = ClusterK(:,2);
     centroid =[sum(Xk)/length(Xk),sum(Yk)/length(Yk)]; %find centroid by average of localizations in cluster
@@ -96,7 +94,7 @@ end
 
 distance = NaN(numberOfClusters,numberOfClusters); %build matrix that is as large as #cluster x #clusters 
 for j = 1:numberOfClusters %loop through the clusters
-    clusterCenter1 = Clusters(j).Centroid; %assign the cluster X and Y to varaibles
+    clusterCenter1 = Clusters(j).Centroid; %assign the cluster X and Y to variables
     ClusterJ = cleanClusters(j).XYG;
     X5 = ClusterJ(:,1);
     center1X = clusterCenter1(1);
